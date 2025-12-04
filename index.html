@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Detalle de banda</title>
+<style>
+       body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.4; }
+       h1 { margin-bottom: 10px; }
+       .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; margin-left: 8px; }
+       .ok { background: #d4edda; }
+       .nok { background: #f8d7da; }
+       ul { padding-left: 18px; }
+</style>
+</head>
+<body>
+<h1>Detalle de banda</h1>
+<div id="resultado">Cargando...</div>
+<script>
+       // Obtener el parámetro ?id= de la URL
+       function getParam(name) {
+           const params = new URLSearchParams(window.location.search);
+           return params.get(name);
+       }
+       const idBuscado = getParam('id');
+       if (!idBuscado) {
+           document.getElementById('resultado').innerText =
+               'No se ha indicado ningún ID en la URL. Usa ?id=30004, por ejemplo.';
+       } else {
+           // Leer el CSV (datos.csv) separado por ;
+           fetch('datos.csv')
+               .then(response => response.text())
+               .then(text => {
+                   const lineas = text.trim().split('\n');
+                   // Cabeceras de la primera línea
+                   const cabeceras = lineas[0].trim().split(';');
+                   // Buscar índice de la columna ID
+                   const indiceId = cabeceras.indexOf('ID');
+                   if (indiceId === -1) {
+                       document.getElementById('resultado').innerText =
+                           'No se encontró la columna "ID" en el archivo de datos.';
+                       return;
+                   }
+                   // Resto de filas
+                   const filas = lineas.slice(1).map(linea =>
+                       linea.trim().split(';')
+                   );
+                   // Buscar fila con ese ID
+                   const fila = filas.find(f => f[indiceId] === idBuscado);
+                   if (!fila) {
+                       document.getElementById('resultado').innerText =
+                           'No se encontró ningún registro con ID = ' + idBuscado;
+                       return;
+                   }
+                   // Construir HTML con todos los campos
+                   let html = '<ul>';
+                   cabeceras.forEach((columna, i) => {
+                       let valor = fila[i] ?? '';
+                       html += `<li><strong>${columna}:</strong> ${valor}</li>`;
+                   });
+                   html += '</ul>';
+                   document.getElementById('resultado').innerHTML = html;
+               })
+               .catch(err => {
+                   document.getElementById('resultado').innerText =
+                       'Error al leer el archivo de datos.';
+                   console.error(err);
+               });
+       }
+</script>
+</body>
+</html>
