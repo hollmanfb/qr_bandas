@@ -4,68 +4,191 @@
 <meta charset="UTF-8">
 <title>Detalle de banda</title>
 <style>
-       body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.4; }
-       h1 { margin-bottom: 10px; }
-       .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; margin-left: 8px; }
-       .ok { background: #d4edda; }
-       .nok { background: #f8d7da; }
-       ul { padding-left: 18px; }
+
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.4; }
+
+        h1 { margin-bottom: 10px; }
+
+        ul { padding-left: 18px; }
+
+        li { margin-bottom: 4px; }
 </style>
 </head>
 <body>
 <h1>Detalle de banda</h1>
 <div id="resultado">Cargando...</div>
 <script>
-       // Obtener el parámetro ?id= de la URL
-       function getParam(name) {
-           const params = new URLSearchParams(window.location.search);
-           return params.get(name);
-       }
-       const idBuscado = getParam('id');
-       if (!idBuscado) {
-           document.getElementById('resultado').innerText =
-               'No se ha indicado ningún ID en la URL. Usa ?id=30004, por ejemplo.';
-       } else {
-           // Leer el CSV (datos.csv) separado por ;
-           fetch('datos.csv')
-               .then(response => response.text())
-               .then(text => {
-                   const lineas = text.trim().split('\n');
-                   // Cabeceras de la primera línea
-                   const cabeceras = lineas[0].trim().split(';');
-                   // Buscar índice de la columna ID
-                   const indiceId = cabeceras.indexOf('ID');
-                   if (indiceId === -1) {
-                       document.getElementById('resultado').innerText =
-                           'No se encontró la columna "ID" en el archivo de datos.';
-                       return;
-                   }
-                   // Resto de filas
-                   const filas = lineas.slice(1).map(linea =>
-                       linea.trim().split(';')
-                   );
-                   // Buscar fila con ese ID
-                   const fila = filas.find(f => f[indiceId] === idBuscado);
-                   if (!fila) {
-                       document.getElementById('resultado').innerText =
-                           'No se encontró ningún registro con ID = ' + idBuscado;
-                       return;
-                   }
-                   // Construir HTML con todos los campos
-                   let html = '<ul>';
-                   cabeceras.forEach((columna, i) => {
-                       let valor = fila[i] ?? '';
-                       html += `<li><strong>${columna}:</strong> ${valor}</li>`;
-                   });
-                   html += '</ul>';
-                   document.getElementById('resultado').innerHTML = html;
-               })
-               .catch(err => {
-                   document.getElementById('resultado').innerText =
-                       'Error al leer el archivo de datos.';
-                   console.error(err);
-               });
-       }
+
+        // Obtener el parámetro ?id= de la URL
+
+        function getParam(name) {
+
+            const params = new URLSearchParams(window.location.search);
+
+            return params.get(name);
+
+        }
+
+        const idBuscado = getParam('id');
+
+        if (!idBuscado) {
+
+            document.getElementById('resultado').innerText =
+
+                'No se ha indicado ningún ID en la URL. Usa ?id=30004, por ejemplo.';
+
+        } else {
+
+            fetch('datos.csv')
+
+                .then(response => response.text())
+
+                .then(text => {
+
+                    // Normalizar saltos de línea
+
+                    text = text.replace(/\r/g, '');
+
+                    // 1) Separar en líneas "crudas"
+
+                    const rawLines = text.split('\n').filter(l => l.trim() !== '');
+
+                    // 2) Unir líneas que están dentro de comillas (por los "1. MIXER\n2. Canulas")
+
+                    const lineas = [];
+
+                    let buffer = '';
+
+                    let quoteCount = 0;
+
+                    for (const line of rawLines) {
+
+                        if (buffer === '') {
+
+                            buffer = line;
+
+                        } else {
+
+                            buffer += '\n' + line;
+
+                        }
+
+                        quoteCount += (line.match(/"/g) || []).length;
+
+                        // Cuando el número total de comillas es par, la fila está "cerrada"
+
+                        if (quoteCount % 2 === 0) {
+
+                            lineas.push(buffer);
+
+                            buffer = '';
+
+                            quoteCount = 0;
+
+                        }
+
+                    }
+
+                    if (buffer.trim() !== '') {
+
+                        lineas.push(buffer);
+
+                    }
+
+                    if (lineas.length === 0) {
+
+                        document.getElementById('resultado').innerText =
+
+                            'El archivo de datos está vacío.';
+
+                        return;
+
+                    }
+
+                    // Función para trocear una fila por ; y limpiar espacios y comillas alrededor
+
+                    function parseRow(line) {
+
+                        return line.split(';').map(v =>
+
+                            v.replace(/^"|"$/g, '').trim()
+
+                        );
+
+                    }
+
+                    // Cabeceras (primera línea)
+
+                    let cabeceras = parseRow(lineas[0]);
+
+                    // Limpiar espacios de los nombres de columna (ID , ESTADO , etc.)
+
+                    cabeceras = cabeceras.map(h => h.trim());
+
+                    // Buscar la columna ID
+
+                    const indiceId = cabeceras.indexOf('ID');
+
+                    if (indiceId === -1) {
+
+                        document.getElementById('resultado').innerText =
+
+                            'No se encontró la columna "ID" en el archivo de datos.';
+
+                        return;
+
+                    }
+
+                    // Resto de filas de datos
+
+                    const filas = lineas.slice(1).map(parseRow);
+
+                    // Buscar la fila con ese ID
+
+                    const fila = filas.find(f => f[indiceId] === idBuscado);
+
+                    if (!fila) {
+
+                        document.getElementById('resultado').innerText =
+
+                            'No se encontró ningún registro con ID = ' + idBuscado;
+
+                        return;
+
+                    }
+
+                    // Construir HTML con todos los campos
+
+                    let html = '<ul>';
+
+                    cabeceras.forEach((columna, i) => {
+
+                        if (!columna) return; // saltar columnas vacías
+
+                        const valor = fila[i] ?? '';
+
+                        html += `<li><strong>${columna}:</strong> ${valor}</li>`;
+
+                    });
+
+                    html += '</ul>';
+
+                    document.getElementById('resultado').innerHTML = html;
+
+                })
+
+                .catch(err => {
+
+                    document.getElementById('resultado').innerText =
+
+                        'Error al leer el archivo de datos.';
+
+                    console.error(err);
+
+                });
+
+        }
 </script>
 </body>
 </html>
+ 
