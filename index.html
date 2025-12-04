@@ -167,7 +167,23 @@
 
                         const valor = fila[i] ?? '';
 
-                        html += `<li><strong>${columna}:</strong> ${valor}</li>`;
+                        if (columna === 'IMAGEN') {
+
+                            // Ruta por defecto: usamos el ID → img/ID.jpg
+
+                            const rutaImagen = valor || (`img/${idBuscado}.jpg`);
+
+                            html += `<li><strong>${columna}:</strong><br>
+<img src="${rutaImagen}" alt="Imagen ${idBuscado}"
+
+                                             style="max-width:300px; height:auto; margin-top:4px;">
+</li>`;
+
+                        } else {
+
+                            html += `<li><strong>${columna}:</strong> ${valor}</li>`;
+
+                        }
 
                     });
 
