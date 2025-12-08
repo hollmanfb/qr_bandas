@@ -1,329 +1,86 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Ficha - Bandas</title>
-<style>
-
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;max-width:920px;margin:32px auto;padding:0 18px;color:#222}
-
-    .card{background:#fff;border-radius:8px;padding:18px 20px;box-shadow:0 8px 26px rgba(0,0,0,0.06)}
-
-    h1{font-size:24px;margin:0 0 12px}
-
-    h2{font-size:18px;margin:0 0 10px}
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ficha - Bandas</title>
+  <style>
+    :root{
+      --fg:#222; --muted:#666; --bg:#fff; --card:#fff; --shadow:0 8px 26px rgba(0,0,0,0.06);
+      --accent:#0a66c2; --border:#e5e5e5;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;max-width:980px;margin:32px auto;padding:0 18px;color:var(--fg);background:var(--bg)}
+    h1{font-size:24px;margin:0 0 10px}
+    h2{font-size:18px;margin:6px 0 10px}
+    .card{background:var(--card);border-radius:8px;padding:18px 20px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+    .grow{flex:1}
+    input[type="text"]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px}
+    button{padding:10px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;font-weight:600;cursor:pointer}
+    button.secondary{background:#fff;color:var(--accent)}
+    .small{color:var(--muted);font-size:0.95rem}
     ul{padding-left:18px;margin:12px 0}
-
     li{margin:8px 0}
-
     img.preview{max-width:420px;height:auto;border-radius:6px;display:block;margin-top:8px}
-
-    .small{color:#666;font-size:0.95rem}
-
-    code{background:#f5f5f5;padding:2px 6px;border-radius:4px}
-</style>
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
+    th{background:#f7f7f7}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .muted{color:#999}
+  </style>
 </head>
 <body>
-<h1>Ficha</h1>
-<div id="resultado" class="card small">Cargando...</div>
-<script>
+  <h1>Ficha de Bandas</h1>
 
-/* ----- Helpers ----- */
+  <div id="controls" class="card">
+    <div class="row">
+      <div class="grow">
+        <label class="small" for="q">Buscar por ID</label>
+        <input id="q" type="text" placeholder="Ej.: 30004" />
+      </div>
+      <div style="align-self:end;display:flex;gap:8px">
+        <button id="btnIr">Abrir</button>
+        <button id="btnList" class="secondary">Ver listado</button>
+      </div>
+    </div>
+    <div id="tip" class="small">También puedes abrir con <code>?id=30004</code> en la URL.</div>
+  </div>
 
-function stripBOM(s){ return s && s.replace(/^\uFEFF/, '') || ''; }
+  <div id="resultado" class="card" style="margin-top:14px">Cargando...</div>
 
-// mapas para corregir mojibake típico
+  <script>
+  // ----- Utilidades -----
+  function stripBOM(s){ return s && s.replace(/^\uFEFF/, '') || ''; }
 
-function fixMojibake(s){
-
-  if (!s) return s;
-
-  const map = {
-
-    'Ã¡':'á','Ã©️':'é','Ã­':'í','Ã³':'ó','Ãº':'ú',
-
-    'Ã':'Á','Ã‰':'É','Ã':'Í','Ã“':'Ó','Ãš':'Ú',
-
-    'Ã±':'ñ','Ã‘':'Ñ',
-
-    'â€™':"’",'â€“':'–','â€¢':'•','â€œ':'“','â€':'”',
-
-    'â€ª':'','Â':'','�':''
-
-  };
-
-  Object.keys(map).forEach(k => { s = s.split(k).join(map[k]); });
-
-  s = s.replace(/\uFFFD/g,'');
-
-  return s;
-
-}
-
-function cleanCell(raw){
-
-  if (raw === undefined || raw === null) return '';
-
-  let s = String(raw);
-
-  s = s.trim();
-
-  if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1,-1);
-
-  s = s.replace(/\u0000/g,'').trim();
-
-  s = fixMojibake(s);
-
-  return s;
-
-}
-
-function safeText(s){
-
-  if (s === undefined || s === null) return '';
-
-  s = String(s);
-
-  s = s.replace(/\t/g,' ').replace(/\s+$/,'').trim();
-
-  s = s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-
-  return s;
-
-}
-
-/* ----- CSV parser tolerante para ; y campos con comillas y saltos ----- */
-
-function parseCSV(text, delimiter=';'){
-
-  text = stripBOM(text).replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-
-  const rows = [];
-
-  let cur = '';
-
-  let row = [];
-
-  let inQuotes = false;
-
-  for (let i=0;i<text.length;i++){
-
-    const ch = text[i];
-
-    const next = text[i+1];
-
-    if (ch === '"') {
-
-      // comillas dobles escapadas ""
-
-      if (inQuotes && next === '"') { cur += '"'; i++; continue; }
-
-      inQuotes = !inQuotes;
-
-      continue;
-
-    }
-
-    if (!inQuotes && ch === delimiter) {
-
-      row.push(cur);
-
-      cur = '';
-
-      continue;
-
-    }
-
-    if (!inQuotes && ch === '\n') {
-
-      row.push(cur);
-
-      rows.push(row);
-
-      row = [];
-
-      cur = '';
-
-      continue;
-
-    }
-
-    cur += ch;
-
+  function fixMojibake(s){
+    if (!s) return s;
+    const map = {
+      'Ã¡':'á','Ã©️':'é','Ã­':'í','Ã³':'ó','Ãº':'ú',
+      'Ã':'Á','Ã‰':'É','Ã':'Í','Ã“':'Ó','Ãš':'Ú',
+      'Ã±':'ñ','Ã‘':'Ñ',
+      'â€™':"’",'â€“':'–','â€¢':'•','â€œ':'“','â€':'”',
+      'â€ª':'','Â':'','�':''
+    };
+    Object.keys(map).forEach(k => { s = s.split(k).join(map[k]); });
+    s = s.replace(/\uFFFD/g,'');
+    return s;
   }
 
-  // push final si hace falta
-
-  if (cur !== '' || row.length) row.push(cur);
-
-  if (row.length) rows.push(row);
-
-  return rows.map(r => r.map(cell => cleanCell(cell)));
-
-}
-
-/* ----- Normalizador de encabezados (caso concreto) ----- */
-
-function normalizeHeader(h){
-
-  if (!h) return '';
-
-  h = h.replace(/\s+/g,' ').trim();
-
-  // corregir problemas concretos que llegan en tu CSV
-
-  h = h.replace('UBICACI�N','UBICACIÓN').replace('UBICACI�N','UBICACIÓN');
-
-  // limpiar caracteres invisibles
-
-  h = h.replace(/\uFFFD/g,'').trim();
-
-  return h;
-
-}
-
-/* ----- Lógica principal ----- */
-
-const params = new URLSearchParams(window.location.search);
-
-const idBuscado = (params.get('id') || '').trim();
-
-const out = document.getElementById('resultado');
-
-if (!idBuscado){
-
-  out.innerHTML = '<div class="small">No se indicó <code>?id=...</code>. Ejemplo: <code>?id=30004</code></div>';
-
-} else {
-
-  fetch('datos.csv')
-
-    .then(r => r.text())
-
-    .then(txt => {
-
-      const table = parseCSV(txt, ';');
-
-      if (!table || table.length < 2){
-
-        out.innerHTML = '<div class="small">CSV vacío o mal formateado.</div>';
-
-        return;
-
-      }
-
-      // cabeceras (primera fila)
-
-      let headers = table[0].map(h => normalizeHeader(fixMojibake(h)));
-
-      // eliminar columnas vacías al final (muchas ;;;;)
-
-      while (headers.length && headers[headers.length-1].trim() === '') headers.pop();
-
-      // buscar índice de ID (tolerante con espacios/personalizaciones)
-
-      let idxID = headers.findIndex(h => h && h.toString().toUpperCase().replace(/\s+/g,'') === 'ID');
-
-      if (idxID === -1){
-
-        out.innerHTML = '<div class="small">No se encontró la columna "ID" en el encabezado.</div>';
-
-        return;
-
-      }
-
-      // filas de datos: ignorar filas que no tengan un valor numérico/útil en la columna ID
-
-      const dataRows = table.slice(1)
-
-        .map(r => {
-
-          // asegurar que la fila tenga el mismo largo que headers (rellenar con '')
-
-          const row = headers.map((_,i) => (r[i] !== undefined ? r[i] : ''));
-
-          return row;
-
-        })
-
-        .filter(r => r[idxID] && r[idxID].toString().trim() !== '' && !/^�+$/.test(r[idxID]));
-
-      // buscar la fila por ID (comparación trim exacta)
-
-      const fila = dataRows.find(r => (String(r[idxID]).trim() === idBuscado));
-
-      if (!fila){
-
-        out.innerHTML = '<div class="small">No se encontró ningún registro con ID = ' + safeText(idBuscado) + '</div>';
-
-        return;
-
-      }
-
-      // construir HTML: mostrar columnas con header no vacío
-
-      let html = '<h2>Ficha ID: ' + safeText(idBuscado) + '</h2><ul>';
-
-      headers.forEach((h, i) => {
-
-        if (!h) return;
-
-        const rawVal = fila[i] || '';
-
-        const val = safeText(String(rawVal));
-
-        // IMAGEN: mostrar <img> intentando ruta del CSV, si no usar img/ID.jpg
-
-        if (h.toUpperCase().includes('IMAGEN')) {
-
-          let ruta = (rawVal && String(rawVal).trim()) ? String(rawVal).trim() : ('img/' + idBuscado + '.jpg');
-
-          ruta = ruta.replace(/^"|"$/g,'').trim();
-
-          ruta = ruta.replace(/^\/+/,''); // quitar leading slashes para rutas relativas
-
-          html += '<li><strong>' + safeText(h) + ':</strong><br>' +
-
-                  '<img class="preview" src="' + ruta + '" alt="Imagen ' + safeText(idBuscado) + '" ' +
-
-                  'onerror="this.style.display=\\'none\\';" />' +
-
-                  (val ? ('<div class="small">' + val + '</div>') : '') +
-
-                  '</li>';
-
-        } else {
-
-          html += '<li><strong>' + safeText(h) + ':</strong> ' + (val || '&nbsp;') + '</li>';
-
-        }
-
-      });
-
-      html += '</ul>';
-
-      // link público directo para compartir
-
-      const publicLink = location.origin + location.pathname + '?id=' + encodeURIComponent(idBuscado);
-
-      html += '<div class="small">Enlace público: <a href="' + publicLink + '">' + safeText(publicLink) + '</a></div>';
-
-      out.innerHTML = html;
-
-    })
-
-    .catch(err => {
-
-      console.error(err);
-
-      out.innerHTML = '<div class="small">Error leyendo datos.csv: ' + safeText(err && err.message) + '</div>';
-
-    });
-
-}
-</script>
-</body>
-</html>
- 
+  function cleanCell(raw){
+    if (raw === undefined || raw === null) return '';
+    let s = String(raw).trim();
+    if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1,-1);
+    s = s.replace(/\u0000/g,'').trim();
+    s = fixMojibake(s);
+    return s;
+  }
+
+  function safeText(s){
+    if (s === undefined || s === null) return '';
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
