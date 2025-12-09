@@ -1,86 +1,289 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ficha - Bandas</title>
-  <style>
-    :root{
-      --fg:#222; --muted:#666; --bg:#fff; --card:#fff; --shadow:0 8px 26px rgba(0,0,0,0.06);
-      --accent:#0a66c2; --border:#e5e5e5;
-    }
-    *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;max-width:980px;margin:32px auto;padding:0 18px;color:var(--fg);background:var(--bg)}
-    h1{font-size:24px;margin:0 0 10px}
-    h2{font-size:18px;margin:6px 0 10px}
-    .card{background:var(--card);border-radius:8px;padding:18px 20px;box-shadow:var(--shadow)}
-    .row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
-    .grow{flex:1}
-    input[type="text"]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px}
-    button{padding:10px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;font-weight:600;cursor:pointer}
-    button.secondary{background:#fff;color:var(--accent)}
-    .small{color:var(--muted);font-size:0.95rem}
-    ul{padding-left:18px;margin:12px 0}
-    li{margin:8px 0}
-    img.preview{max-width:420px;height:auto;border-radius:6px;display:block;margin-top:8px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
-    th{background:#f7f7f7}
-    a{color:var(--accent);text-decoration:none}
-    a:hover{text-decoration:underline}
-    .muted{color:#999}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ficha de Bandas</title>
+<style>
+:root{
+--fg:#222; --muted:#666; --bg:#f5f5f7; --card:#fff; --shadow:0 8px 26px rgba(0,0,0,0.06);
+--accent:#0a66c2; --border:#e5e5e5;
+}
+*{box-sizing:border-box}
+body{
+font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+max-width:980px;margin:32px auto;padding:0 18px;
+color:var(--fg);background:var(--bg)
+}
+h1{font-size:24px;margin:0 0 10px}
+h2{font-size:18px;margin:6px 0 10px}
+.card{background:var(--card);border-radius:8px;padding:18px 20px;box-shadow:var(--shadow)}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+.grow{flex:1}
+label.small{display:block;margin-bottom:4px}
+input[type="text"]{
+width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px
+}
+button{
+padding:10px 14px;border:1px solid var(--accent);background:var(--accent);
+color:#fff;border-radius:6px;font-weight:600;cursor:pointer
+}
+button.secondary{background:#fff;color:var(--accent)}
+.small{color:var(--muted);font-size:0.95rem}
+ul{padding-left:18px;margin:12px 0}
+li{margin:8px 0}
+img.preview{max-width:420px;height:auto;border-radius:6px;display:block;margin-top:8px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;background:#fff}
+th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+th{background:#f7f7f7}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.muted{color:#999}
+</style>
 </head>
 <body>
-  <h1>Ficha de Bandas</h1>
+<h1>Ficha de Bandas</h1>
 
-  <div id="controls" class="card">
-    <div class="row">
-      <div class="grow">
-        <label class="small" for="q">Buscar por ID</label>
-        <input id="q" type="text" placeholder="Ej.: 30004" />
-      </div>
-      <div style="align-self:end;display:flex;gap:8px">
-        <button id="btnIr">Abrir</button>
-        <button id="btnList" class="secondary">Ver listado</button>
-      </div>
-    </div>
-    <div id="tip" class="small">También puedes abrir con <code>?id=30004</code> en la URL.</div>
-  </div>
+<div id="controls" class="card">
+<div class="row">
+<div class="grow">
+<label class="small" for="q">Buscar por ID</label>
+<input id="q" type="text" placeholder="Ej.: 30004" />
+</div>
+<div style="align-self:end;display:flex;gap:8px">
+<button id="btnIr">Abrir</button>
+<button id="btnList" class="secondary">Ver listado</button>
+</div>
+</div>
+<div id="tip" class="small">
+También puedes abrir con <code>?id=30004</code> en la URL.
+</div>
+</div>
 
-  <div id="resultado" class="card" style="margin-top:14px">Cargando...</div>
+<div id="resultado" class="card" style="margin-top:14px">Cargando...</div>
 
-  <script>
-  // ----- Utilidades -----
-  function stripBOM(s){ return s && s.replace(/^\uFEFF/, '') || ''; }
+<script>
+// ------------ Utilidades ------------
 
-  function fixMojibake(s){
-    if (!s) return s;
-    const map = {
-      'Ã¡':'á','Ã©️':'é','Ã­':'í','Ã³':'ó','Ãº':'ú',
-      'Ã':'Á','Ã‰':'É','Ã':'Í','Ã“':'Ó','Ãš':'Ú',
-      'Ã±':'ñ','Ã‘':'Ñ',
-      'â€™':"’",'â€“':'–','â€¢':'•','â€œ':'“','â€':'”',
-      'â€ª':'','Â':'','�':''
-    };
-    Object.keys(map).forEach(k => { s = s.split(k).join(map[k]); });
-    s = s.replace(/\uFFFD/g,'');
-    return s;
-  }
+// quitar BOM
+function stripBOM(s){ return s && s.replace(/^\uFEFF/, '') || ''; }
 
-  function cleanCell(raw){
-    if (raw === undefined || raw === null) return '';
-    let s = String(raw).trim();
-    if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1,-1);
-    s = s.replace(/\u0000/g,'').trim();
-    s = fixMojibake(s);
-    return s;
-  }
+// corregir caracteres raros típicos (Ã¡, Ã±, etc.)
+function fixMojibake(s){
+if (!s) return s;
+const map = {
+'Ã¡':'á','Ã©':'é','Ã­':'í','Ã³':'ó','Ãº':'ú',
+'Ã ':'Á','Ã‰':'É','Ã ':'Í','Ã“':'Ó','Ãš':'Ú',
+'Ã±':'ñ','Ã‘':'Ñ',
+'â€™':"’",'â€“':'–','â€¢':'•','â€œ':'“','â€ ':'”',
+'â€ª':'','Â':'','�':''
+};
+for (const k in map){ s = s.split(k).join(map[k]); }
+s = s.replace(/\uFFFD/g,'');
+return s;
+}
 
-  function safeText(s){
-    if (s === undefined || s === null) return '';
-    return String(s)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
+function cleanCell(raw){
+if (raw === undefined || raw === null) return '';
+let s = String(raw);
+s = s.trim();
+if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1,-1);
+s = s.replace(/\u0000/g,'').trim();
+s = fixMojibake(s);
+return s;
+}
+
+function safeText(s){
+if (s === undefined || s === null) return '';
+return String(s)
+.replace(/&/g,'&amp;')
+.replace(/</g,'&lt;')
+.replace(/>/g,'&gt;');
+}
+
+// parser CSV con delimitador ; y soporte de comillas + saltos de línea
+function parseCSV(text, delimiter=';'){
+text = stripBOM(text).replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+const rows = [];
+let cur = '';
+let row = [];
+let inQuotes = false;
+for (let i=0;i<text.length;i++){
+const ch = text[i];
+const next = text[i+1];
+if (ch === '"'){
+if (inQuotes && next === '"'){ cur += '"'; i++; continue; }
+inQuotes = !inQuotes;
+continue;
+}
+if (!inQuotes && ch === delimiter){
+row.push(cur); cur=''; continue;
+}
+if (!inQuotes && ch === '\n'){
+row.push(cur); rows.push(row); row=[]; cur=''; continue;
+}
+cur += ch;
+}
+if (cur !== '' || row.length){ row.push(cur); }
+if (row.length) rows.push(row);
+return rows.map(r => r.map(cleanCell));
+}
+
+function normalizeHeader(h){
+if (!h) return '';
+h = fixMojibake(h);
+h = h.replace(/\s+/g,' ').trim();
+h = h.replace('UBICACI�N','UBICACIÓN');
+return h;
+}
+
+// ------------ Estado global ------------
+let HEADERS = [];
+let ROWS = [];
+
+// ------------ Renderers ------------
+const $resultado = document.getElementById('resultado');
+
+function renderMensaje(msg){
+$resultado.innerHTML = '<div class="small">' + safeText(msg) + '</div>';
+}
+
+function renderFichaById(id){
+id = (id || '').trim();
+if (!id){ renderMensaje('Introduce un ID válido.'); return; }
+
+const idxID = findIdIndex();
+if (idxID === -1){
+renderMensaje('No se encontró la columna "ID" en el CSV.');
+return;
+}
+
+const fila = ROWS.find(r => (r[idxID] || '').toString().trim() === id);
+if (!fila){
+renderMensaje('No se encontró ningún registro con ID = ' + id);
+return;
+}
+
+let html = '<h2>Ficha ID: ' + safeText(id) + '</h2><ul>';
+HEADERS.forEach((h,i) => {
+if (!h) return;
+const rawVal = fila[i] || '';
+const val = safeText(rawVal);
+
+if (h.toUpperCase().includes('IMAGEN')){
+let ruta = rawVal && rawVal.trim() ? rawVal.trim() : ('img/' + id + '.jpg');
+ruta = ruta.replace(/^"|"$/g,'').trim().replace(/^\/+/,'');
+html += '<li><strong>' + safeText(h) + ':</strong><br>' +
+'<img class="preview" src="' + ruta + '" alt="Imagen ' + safeText(id) + '"' +
+' onerror="this.style.display=\'none\';" />' +
+(val ? '<div class="small">' + val + '</div>' : '') +
+'</li>';
+} else {
+html += '<li><strong>' + safeText(h) + ':</strong> ' + (val || '&nbsp;') + '</li>';
+}
+});
+html += '</ul>';
+
+const link = location.origin + location.pathname + '?id=' + encodeURIComponent(id);
+html += '<div class="small">Enlace público: <a href="' + link + '">' + safeText(link) + '</a></div>';
+
+$resultado.innerHTML = html;
+}
+
+function renderListado(){
+const idxID = findIdIndex();
+if (idxID === -1){
+renderMensaje('No se encontró la columna "ID" en el CSV.');
+return;
+}
+
+// columnas útiles para listado
+const idxFamilia = HEADERS.findIndex(h => h.toUpperCase().includes('FAMILIA'));
+const idxTipo = HEADERS.findIndex(h => h.toUpperCase().includes('TIPO BANDA'));
+const idxUbic = HEADERS.findIndex(h => h.toUpperCase().includes('UBICACIÓN'));
+
+let html = '<h2>Listado de bandas</h2>';
+html += '<table><thead><tr>' +
+'<th>ID</th>' +
+(idxFamilia>-1 ? '<th>Familia</th>' : '') +
+(idxTipo>-1 ? '<th>Tipo banda</th>' : '') +
+(idxUbic>-1 ? '<th>Ubicación</th>' : '') +
+'</tr></thead><tbody>';
+
+ROWS.forEach(r => {
+const id = (r[idxID] || '').toString().trim();
+if (!id) return;
+html += '<tr>';
+const link = '?id=' + encodeURIComponent(id);
+html += '<td><a href="' + link + '">' + safeText(id) + '</a></td>';
+if (idxFamilia>-1) html += '<td>' + safeText(r[idxFamilia] || '') + '</td>';
+if (idxTipo>-1) html += '<td>' + safeText(r[idxTipo] || '') + '</td>';
+if (idxUbic>-1) html += '<td>' + safeText(r[idxUbic] || '') + '</td>';
+html += '</tr>';
+});
+
+html += '</tbody></table>';
+$resultado.innerHTML = html;
+}
+
+function findIdIndex(){
+// buscamos columna ID ignorando espacios
+let idx = HEADERS.findIndex(h => h && h.toUpperCase().replace(/\s+/g,'') === 'ID');
+return idx;
+}
+
+// ------------ Carga inicial ------------
+(function init(){
+const params = new URLSearchParams(location.search);
+const idUrl = params.get('id');
+
+fetch('datos.csv')
+.then(r => r.text())
+.then(txt => {
+const table = parseCSV(txt,';');
+if (!table || table.length < 2){
+renderMensaje('CSV vacío o no válido.');
+return;
+}
+HEADERS = table[0].map(normalizeHeader);
+// recortar columnas vacías al final
+while (HEADERS.length && !HEADERS[HEADERS.length-1]) HEADERS.pop();
+
+ROWS = table.slice(1).map(r => {
+const row = HEADERS.map((_,i) => r[i] !== undefined ? r[i] : '');
+return row;
+}).filter(r => {
+const idxID = findIdIndex();
+return idxID>-1 && r[idxID] && r[idxID].toString().trim() !== '' && r[idxID] !== '�';
+});
+
+if (idUrl){
+renderFichaById(idUrl);
+} else {
+renderMensaje('Introduce un ID y pulsa "Abrir", o pulsa "Ver listado" para ver todas las bandas.');
+}
+})
+.catch(err => {
+console.error(err);
+renderMensaje('Error leyendo datos.csv: ' + (err && err.message ? err.message : err));
+});
+
+// eventos buscador
+document.getElementById('btnIr').addEventListener('click', () => {
+const val = document.getElementById('q').value.trim();
+if (!val){ renderMensaje('Introduce un ID para buscar.'); return; }
+// cambiamos la URL para que también funcione si se recarga
+const url = location.origin + location.pathname + '?id=' + encodeURIComponent(val);
+location.href = url;
+});
+
+document.getElementById('btnList').addEventListener('click', () => {
+renderListado();
+// limpiar ?id= de la barra sin recargar
+const base = location.origin + location.pathname;
+window.history.replaceState({}, '', base);
+});
+})();
+</script>
+</body>
+</html>
